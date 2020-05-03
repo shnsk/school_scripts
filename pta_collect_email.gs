@@ -6,20 +6,20 @@ var debug=false;
 
 function updateList() {
   var sheet=SpreadsheetApp.getActiveSheet();
-  var range=sheet.getRange(1, 1, 1, 2);
-  range.setValues([['連絡先', '本文']]);
+  sheet.clear();
+  var range=sheet.getRange(1, 1, 1, 3);
+  range.setValues([['連絡先', 'タイトル', '本文']]);
   var r=1;
   GmailApp.getInboxThreads().forEach(function(thread) {
     subject=thread.getFirstMessageSubject();
-    if (subject=='' || subject.match('登録')) {
-      r+=1;
-      var firstMessage=thread.getMessages()[0];
-      var body=firstMessage.getPlainBody();
-      var email=firstMessage.getFrom();
-      Logger.log("%s: %d", email, r);
-      var range=sheet.getRange(r, 1, 1, 2);
-      range.setValues([[email, body]]);
-    }
+    r+=1;
+    var firstMessage=thread.getMessages()[0];
+    var subject=firstMessage.getSubject();
+    var body=firstMessage.getPlainBody();
+    var email=firstMessage.getFrom();
+    Logger.log("%s: %d", email, r);
+    var range=sheet.getRange(r, 1, 1, 3);
+    range.setValues([[email, subject, body]]);
   })
 }
 
