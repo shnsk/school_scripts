@@ -1,6 +1,9 @@
 /** 名簿が記録されている sheet の名前　*/
 var memberSheet='名簿';
 var memberSheetNameColumn='名前';
+var myEmail=Session.getActiveUser().getEmail();
+
+Logger.log(myEmail);
 
 /**
  * Gmail の　inbox を確認して、sheet のメンバーのリストを更新する
@@ -13,10 +16,18 @@ var memberSheetNameColumn='名前';
  */
 function updateList() {
   var sheet=SpreadsheetApp.getActiveSheet();
-  sheet.clear();
-  
+  sheet.clearContents();
+  sheet.clearNotes();
+ 
   // タイトルの設定
   var range=sheet.getRange(1, 1, 1, 4)
+  /* column について
+   * 1=番号 (id)
+   * 2=名前 (name)
+   * 3=連絡先 (email)
+   * 4=メール件名 (subject) <- note にメールの本文
+   * 5以降に、過去のメールの内容を記録
+   */
   range.setValues([['番号', '名前', '連絡先', 'メール件名']]);
   range.setBackground('yellow');
   // 名前の読み込み
@@ -35,24 +46,32 @@ function updateList() {
     var subject=firstMessage.getSubject();
     var body=firstMessage.getPlainBody();
     var email=firstMessage.getFrom();
-
-    // メンバーリストの何処にあるのかを探す
-    var r=null;
-    for (var i=0; i<members.length;i++) {
-      memberName=members[i];
-      if ((body+subject).replace(/\s/g, '').search(memberName) != -1) {
-        Logger.log('name[%s] in [%s]', memberName, body+subject);
-        r=i+2; /* i 0 start; row 2 start */
-        break;
+    if (email.search(myEmail) == -1) {
+      // メンバーリストの何処にあるのかを探す
+      var r=null;
+      for (var i=0; i<members.length;i++) {
+        memberName=members[i];
+        if ((body+subject).replace(/\s/g, '').search(memberName) != -1) {
+          Logger.log('name[%s] in [%s]', memberName, body+subject);
+          r=i+2; /* i 0 start; row 2 start */
+          break;
+        }
       }
-    }
-    // ない場合は次の空いている行に書き出す
-    if(r==null){ r=nextEmptyRow++; }
+      // ない場合は次の空いている行に書き出す
+      if(r==null){ r=nextEmptyRow++; }
     
-    // 記録する場所
-    Logger.log("%s: %d", email, r);
-    sheet.getRange(r, 3, 1, 2).setValues([[email, subject]]);
-    sheet.getRange(r, 4, 1, 1).setNote([[body]]);
+      // 記録するカラム
+      var c=3;
+      while(!sheet.getRange(r, c).isBlank()) {
+        c+=2;
+      }
+      Logger.log("%s: (r=%d, c=%d)", email, r, c);
+      sheet.getRange(r, 3, 1, 2).setValues([[email, subject]]);
+      sheet.getRange(r, 4, 1, 1).setNote([[body]]);
+    }
+    else {
+      Logger.log('skipping: my email');
+    }    
   })
 }
 
@@ -84,7 +103,7 @@ function readMemberSheet() {
 }
 
 /**
- * 現在activeなsheetの、2列目にある
+ * 現在activeなsheetの、2列目にある目連絡先のリストを取得して Bcc に入れる。
  */
 function sendMail() {
   var sheet=SpreadsheetApp.getActiveSheet();
@@ -93,8 +112,7 @@ function sendMail() {
   var range=sheet.getRange(2, 3, maxRow-1, 1);
   var emails=range.getValues().map(function(i) {return i[0]}).filter(function(m) {return m!=''}).join(', ')
   Logger.log(emails);
-  var draft=GmailApp.createDraft(GmailApp.getUserLabels(), "PTAからの連絡", "", {
+  var draft=GmailApp.createDraft(Session.getActiveUser().getEmail(), "PTAからの連絡", "", {
     bcc: emails
   })
-
 }
