@@ -65,9 +65,10 @@ function updateList() {
       while(!sheet.getRange(r, c).isBlank()) {
         c+=2;
       }
+
       Logger.log("%s: (r=%d, c=%d)", email, r, c);
-      sheet.getRange(r, 3, 1, 2).setValues([[email, subject]]);
-      sheet.getRange(r, 4, 1, 1).setNote([[body]]);
+      sheet.getRange(r, c, 1, 2).setValues([[email, subject]]);
+      sheet.getRange(r, c+1, 1, 1).setNote([[body]]);
     }
     else {
       Logger.log('skipping: my email');
